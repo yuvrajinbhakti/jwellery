@@ -10,6 +10,9 @@ import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import CircularProgress from "@mui/material/CircularProgress";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import {
   Visibility,
   VisibilityOff,
@@ -18,7 +21,7 @@ import {
   Person,
   Phone,
 } from "@mui/icons-material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -33,6 +36,13 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTnC, setAgreeTnC] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({
+    open: false,
+    message: "",
+    severity: "error",
+  });
+  const navigate = useNavigate();
   const [errors, setErrors] = useState({
     firstName: "",
     lastName: "",
@@ -121,12 +131,66 @@ const Signup = () => {
     return valid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      // Here would be your registration logic
-      console.log("Form submitted:", formData);
+      setLoading(true);
+      try {
+        const response = await fetch(
+          "https://fastapi-backend-s81v.onrender.com/signup",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            credentials: "include",
+            mode: "cors",
+            body: JSON.stringify({
+              username: formData.email, // Using email as username
+              password: formData.password,
+              email: formData.email,
+              phone_number: formData.phone,
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setAlert({
+            open: true,
+            message: "Account created successfully! Please login.",
+            severity: "success",
+          });
+
+          // Redirect to login page after successful signup
+          setTimeout(() => {
+            navigate("/login");
+          }, 2000);
+        } else {
+          setAlert({
+            open: true,
+            message: data.detail || "Registration failed. Please try again.",
+            severity: "error",
+          });
+        }
+      } catch (error) {
+        setAlert({
+          open: true,
+          message: "Network error. Please try again later.",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
+  };
+
+  const handleCloseAlert = () => {
+    setAlert({ ...alert, open: false });
   };
 
   return (
@@ -194,6 +258,7 @@ const Signup = () => {
                     onChange={handleChange}
                     error={!!errors.firstName}
                     helperText={errors.firstName}
+                    disabled={loading}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -215,6 +280,7 @@ const Signup = () => {
                     onChange={handleChange}
                     error={!!errors.lastName}
                     helperText={errors.lastName}
+                    disabled={loading}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -238,6 +304,7 @@ const Signup = () => {
                 onChange={handleChange}
                 error={!!errors.email}
                 helperText={errors.email}
+                disabled={loading}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -259,6 +326,7 @@ const Signup = () => {
                 onChange={handleChange}
                 error={!!errors.phone}
                 helperText={errors.phone}
+                disabled={loading}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -281,6 +349,7 @@ const Signup = () => {
                 onChange={handleChange}
                 error={!!errors.password}
                 helperText={errors.password}
+                disabled={loading}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -293,6 +362,7 @@ const Signup = () => {
                         aria-label="toggle password visibility"
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
+                        disabled={loading}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -314,6 +384,7 @@ const Signup = () => {
                 onChange={handleChange}
                 error={!!errors.confirmPassword}
                 helperText={errors.confirmPassword}
+                disabled={loading}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -328,6 +399,7 @@ const Signup = () => {
                           setShowConfirmPassword(!showConfirmPassword)
                         }
                         edge="end"
+                        disabled={loading}
                       >
                         {showConfirmPassword ? (
                           <VisibilityOff />
@@ -347,6 +419,7 @@ const Signup = () => {
                     onChange={(e) => setAgreeTnC(e.target.checked)}
                     name="agreeTnC"
                     color="primary"
+                    disabled={loading}
                   />
                 }
                 label="I agree to the Terms and Conditions"
@@ -362,6 +435,7 @@ const Signup = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
+                disabled={loading}
                 sx={{
                   mt: 3,
                   mb: 2,
@@ -373,7 +447,11 @@ const Signup = () => {
                   borderRadius: "8px",
                 }}
               >
-                Sign Up
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Sign Up"
+                )}
               </Button>
 
               <Box sx={{ textAlign: "center", mt: 2 }}>
@@ -407,6 +485,22 @@ const Signup = () => {
           }}
         />
       </Box>
+
+      {/* Alert for success/error messages */}
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity={alert.severity === "error" ? "error" : "success"}
+          sx={{ width: "100%" }}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

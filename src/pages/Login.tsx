@@ -8,14 +8,24 @@ import Paper from "@mui/material/Paper";
 import Link from "@mui/material/Link";
 import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
+import CircularProgress from "@mui/material/CircularProgress";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import { Visibility, VisibilityOff, Email, Lock } from "@mui/icons-material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({
+    open: false,
+    message: "",
+    severity: "error",
+  });
+  const navigate = useNavigate();
 
   const validate = () => {
     let valid = true;
@@ -38,12 +48,67 @@ const Login = () => {
     return valid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      // Here would be your authentication logic
-      console.log("Login attempted with:", email, password);
+      setLoading(true);
+      try {
+        const response = await fetch(
+          "https://fastapi-backend-s81v.onrender.com/login",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            credentials: "include",
+            mode: "cors",
+            body: JSON.stringify({
+              username: email, // Using email as username
+              password: password,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Save auth token or user data to localStorage if returned
+          if (data.access_token) {
+            localStorage.setItem("token", data.access_token);
+          }
+          setAlert({
+            open: true,
+            message: "Login successful!",
+            severity: "success",
+          });
+
+          // Redirect to dashboard or home page after successful login
+          setTimeout(() => {
+            navigate("/");
+          }, 1500);
+        } else {
+          setAlert({
+            open: true,
+            message:
+              data.detail || "Login failed. Please check your credentials.",
+            severity: "error",
+          });
+        }
+      } catch (error) {
+        setAlert({
+          open: true,
+          message: "Network error. Please try again later.",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
+  };
+
+  const handleCloseAlert = () => {
+    setAlert({ ...alert, open: false });
   };
 
   return (
@@ -118,6 +183,7 @@ const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 error={!!errors.email}
                 helperText={errors.email}
+                disabled={loading}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -139,6 +205,7 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 error={!!errors.password}
                 helperText={errors.password}
+                disabled={loading}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -151,6 +218,7 @@ const Login = () => {
                         aria-label="toggle password visibility"
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
+                        disabled={loading}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -160,7 +228,7 @@ const Login = () => {
               />
 
               <Box sx={{ textAlign: "right", mt: 1 }}>
-                <Link component="button" variant="body2">
+                <Link component="button" variant="body2" disabled={loading}>
                   Forgot password?
                 </Link>
               </Box>
@@ -169,6 +237,7 @@ const Login = () => {
                 type="submit"
                 fullWidth
                 variant="contained"
+                disabled={loading}
                 sx={{
                   mt: 3,
                   mb: 2,
@@ -180,7 +249,11 @@ const Login = () => {
                   borderRadius: "8px",
                 }}
               >
-                Sign In
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Sign In"
+                )}
               </Button>
 
               <Box sx={{ textAlign: "center", mt: 2 }}>
@@ -200,6 +273,22 @@ const Login = () => {
           </Paper>
         </Box>
       </Box>
+
+      {/* Alert for success/error messages */}
+      <Snackbar
+        open={alert.open}
+        autoHideDuration={6000}
+        onClose={handleCloseAlert}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseAlert}
+          severity={alert.severity === "error" ? "error" : "success"}
+          sx={{ width: "100%" }}
+        >
+          {alert.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
