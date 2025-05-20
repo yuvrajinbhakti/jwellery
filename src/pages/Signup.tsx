@@ -20,6 +20,7 @@ import {
   Lock,
   Person,
   Phone,
+  AccountCircle,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
@@ -27,6 +28,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    username: "",
     email: "",
     phone: "",
     password: "",
@@ -46,6 +48,7 @@ const Signup = () => {
   const [errors, setErrors] = useState({
     firstName: "",
     lastName: "",
+    username: "",
     email: "",
     phone: "",
     password: "",
@@ -66,6 +69,7 @@ const Signup = () => {
     const newErrors = {
       firstName: "",
       lastName: "",
+      username: "",
       email: "",
       phone: "",
       password: "",
@@ -82,6 +86,12 @@ const Signup = () => {
     // Last Name validation
     if (!formData.lastName.trim()) {
       newErrors.lastName = "Last name is required";
+      valid = false;
+    }
+
+    // Username validation
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
       valid = false;
     }
 
@@ -147,7 +157,7 @@ const Signup = () => {
             credentials: "include",
             mode: "cors",
             body: JSON.stringify({
-              username: formData.email, // Using email as username
+              username: formData.username,
               password: formData.password,
               email: formData.email,
               phone_number: formData.phone,
@@ -291,6 +301,28 @@ const Signup = () => {
                   />
                 </Box>
               </Box>
+
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="username"
+                label="Username"
+                name="username"
+                autoComplete="username"
+                value={formData.username}
+                onChange={handleChange}
+                error={!!errors.username}
+                helperText={errors.username}
+                disabled={loading}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <AccountCircle color="primary" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
               <TextField
                 margin="normal"
